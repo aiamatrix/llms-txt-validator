@@ -2,13 +2,28 @@
 
 A standalone CLI, Node.js library, and GitHub Action for checking the [llms.txt v2 proposal](https://llmstxt.org/) and its [August 2026 changes](https://llmstxt.org/changes.html).
 
+<!-- Badges: enable CI, npm version, and license badges after publishing. -->
+
+## Example output
+
+Excerpt from a CLI run against a small local fixture site. Its HTML page intentionally omits the Markdown alternate relation.
+
+```text
+  PASS file.http: llms.txt returned HTTP 200.
+  INFO file.size: Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).
+  WARN discovery.alternate: HTML should advertise a text/markdown alternate.
+
+Summary: 14 pass, 1 info, 1 warn, 0 fail
+Get a full AI-readiness report: https://aiamatrix.com
+```
+
 Maintained by Polygons Media LLC, San Rafael, California. Contact: contact@aiamatrix.com. Product website: https://aiamatrix.com.
 
-This tool checks file structure and selected publication signals. It does not measure the AIA Score or guarantee AI citations, rankings, retrieval, or traffic. No telemetry is collected. Remote validation sends requests only to the submitted site and linked resources, including Markdown/HTML counterparts and applicable llms.txt paths.
+This tool checks file structure and selected publication signals. It does not measure the AIA Score or guarantee AI citations, rankings, retrieval, or traffic. No telemetry is collected. Remote validation sends requests only to the submitted site and linked resources, with Markdown/HTML counterpart and applicable llms.txt probes limited to the root index’s origin.
 
 ## Install and run
 
-Requires Node.js 20 or newer. The following npm and Action examples become available after publication; this source project is not evidence that the package is already published.
+Requires Node.js 20 or newer. The following npm and Action examples become available after publication.
 
 ```sh
 npx @aiamatrix/llms-txt-validator https://example.com
@@ -16,7 +31,7 @@ npx @aiamatrix/llms-txt-validator ./public/llms.txt
 npx @aiamatrix/llms-txt-validator ./public/llms.txt --no-network --json
 ```
 
-From source:
+From source (use Node.js 22.13+ for development; Node 24 is recommended):
 
 ```sh
 npm ci
@@ -40,22 +55,22 @@ Exit codes: **0** means no findings at the configured failure threshold; **1** m
 
 ## What it checks
 
-| Check                                                                                                  | Failure or warning                                    | Reference                                                  |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------- |
-| HTTP 200, plain/Markdown content type, non-HTML body                                                   | Failure                                               | [Proposal](https://llmstxt.org/#proposal)                  |
-| Exactly one initial H1; only H1/H2 headings                                                            | Failure                                               | [Format](https://llmstxt.org/#format)                      |
-| Optional summary before non-heading preamble                                                           | Failure                                               | [Format](https://llmstxt.org/#format)                      |
-| H2 sections contain nonempty `- [name](url)` lists; notes are optional                                 | Failure                                               | [Format](https://llmstxt.org/#format)                      |
-| Linked resources return 200, HEAD with GET fallback                                                    | Failure                                               | [Proposal](https://llmstxt.org/#proposal)                  |
-| Linked resource is HTML or lacks a plain/Markdown type                                                 | Warning                                               | [Proposal](https://llmstxt.org/#proposal)                  |
-| Same-page Markdown version exists, appended or replaced `.md`, directory `index.md` or `index.html.md` | Warning                                               | [Proposal](https://llmstxt.org/#proposal)                  |
-| HTML alternate and describedby relations; Markdown describedby relation                                | Warning                                               | [Proposal](https://llmstxt.org/#proposal)                  |
-| Scoped indexes and most-specific applicable describedby relation                                       | Invalid existing index fails; unavailable probes warn | [Format](https://llmstxt.org/#format)                      |
-| File larger than 50 KiB                                                                                | Warning: tool guidance, not a spec requirement        | [Proposal](https://llmstxt.org/#proposal)                  |
-| Link limit reached or HTML counterpart not located                                                     | Coverage warning                                      | [Proposal](https://llmstxt.org/#proposal)                  |
-| `Optional` section                                                                                     | Ordinary section; never omitted                       | [Changes](https://llmstxt.org/changes.html#v2-august-2026) |
+| Check                                                                                                                                 | Failure or warning                                                             | Reference                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| HTTP 200, plain/Markdown content type, non-HTML body                                                                                  | Failure                                                                        | [Proposal](https://llmstxt.org/#proposal)                  |
+| Exactly one initial H1; only H1/H2 headings                                                                                           | Failure                                                                        | [Format](https://llmstxt.org/#format)                      |
+| Optional summary before non-heading preamble                                                                                          | Warning                                                                        | [Format](https://llmstxt.org/#format)                      |
+| H2 sections contain nonempty Markdown link lists; all bullet markers, titles, balanced URL parentheses and wrapped notes are accepted | Empty sections or items without links fail; prose or item arrangement warns    | [Format](https://llmstxt.org/#format)                      |
+| Linked resources return 200, HEAD with GET fallback                                                                                   | Failure                                                                        | [Proposal](https://llmstxt.org/#proposal)                  |
+| Linked resource is HTML or lacks a plain/Markdown type                                                                                | Warning                                                                        | [Proposal](https://llmstxt.org/#proposal)                  |
+| Same-page Markdown version exists, appended or replaced `.md`, directory `index.md` or `index.html.md`                                | Warning                                                                        | [Proposal](https://llmstxt.org/#proposal)                  |
+| HTML alternate and describedby relations; Markdown describedby relation                                                               | Warning                                                                        | [Proposal](https://llmstxt.org/#proposal)                  |
+| Scoped indexes and most-specific applicable describedby relation                                                                      | Invalid existing index fails; unavailable probes warn                          | [Format](https://llmstxt.org/#format)                      |
+| File size and local format-only mode                                                                                                  | Oversize warns; size within the limit and skipped networking are informational | [Proposal](https://llmstxt.org/#proposal)                  |
+| Link limit reached or HTML counterpart not located                                                                                    | Coverage warning                                                               | [Proposal](https://llmstxt.org/#proposal)                  |
+| `Optional` section                                                                                                                    | Ordinary section; never omitted                                                | [Changes](https://llmstxt.org/changes.html#v2-august-2026) |
 
-The parser accepts a UTF-8 BOM, relative URLs, CRLF, and a title-only file. The requested validator profile uses dash-prefixed, single-line link items. Other Markdown list styles or multiline entries are flagged even where a general Markdown processor can parse them.
+The parser accepts a UTF-8 BOM, relative URLs, CRLF, a title-only file, and Markdown lists with any bullet marker. File-list items start with a link and may include a link title, balanced parentheses in the URL, and notes after a colon that wrap across lines. Introductory prose under an H2 and a summary after the preamble produce warnings. Links are extracted even from items that warn.
 
 ## Node.js library
 
@@ -80,6 +95,7 @@ process.exitCode = exitCode(report, "error");
     url: https://example.com
     fail-on: error
     max-links: "50"
+    timeout: "10000"
 ```
 
 The bundled JavaScript Action requires no dependency installation by the consuming workflow and writes a job summary. See [the example workflow](examples/validate-website.yml). For security-sensitive workflows, pin an audited commit SHA. Supply trusted URLs; validation fetches URLs found in the submitted file.
@@ -114,6 +130,7 @@ Tool errors in JSON mode use `{"version":"1.0","error":{"message":"..."}}` and e
 
 Node's built-in fetch ignores HTTP_PROXY and HTTPS_PROXY by default. On Node 24+, set `NODE_USE_ENV_PROXY=1` to use environment proxy settings. For a custom certificate authority, set `NODE_EXTRA_CA_CERTS` to the path of its PEM certificate file before starting Node.
 
+- External origins receive only linked-resource HTTP and resource-type checks. Discovery, Markdown-version, HTML-counterpart, and scope checks apply only to resources on the root llms.txt origin.
 - At most five link-validation tasks run concurrently. Ancillary requests within each task are sequential. Responses are cached per method and URL.
 - User-Agent: `aiamatrix-llms-txt-validator/1.0.0 (+https://github.com/aiamatrix/llms-txt-validator)`.
 - Redirect loops and chains beyond ten redirects fail. Response bodies are capped at 2 MiB for resource safety.
@@ -122,24 +139,10 @@ Node's built-in fetch ignores HTTP_PROXY and HTTPS_PROXY by default. On Node 24+
 - Matching HTML counterparts is heuristic when the file URL does not uniquely identify its original page. Text/plain is accepted, but the tool does not prove that a text resource is semantically useful Markdown.
 - Network access can reach local/private addresses if a supplied or linked URL points there. Use trusted inputs and an isolated runner with appropriate outbound network restrictions for untrusted sites.
 
-## Contributing and releasing
+## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-```sh
-npm ci
-npm run lint
-npm test
-npm run build
-npm pack --dry-run
-```
-
-CI runs on pushes and pull requests. Commit the generated `dist/` bundle so GitHub Actions work directly from tags. CI verifies that rebuilding does not change it.
-
-Before the first release, confirm ownership of the `aiamatrix` GitHub organization and npm scope, configure npm trusted publishing for this repository and `publish.yml`, configure the `npm` GitHub environment, and confirm the package name is available. The tag-triggered workflow uses OIDC; no npm token belongs in this repository. Trusted publishing setup may require initially creating the npm package through an authenticated npm account.
-
-Version the package, update CHANGELOG, build and commit `dist/`, run all checks and a secrets scan, then create `v1.0.0`. A tag matching package.json triggers npm publishing. Publication and the llmstxt.org integration submission are separate launch steps.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Release instructions are in CONTRIBUTING.md.
 
 ## License
 
-MIT © 2026 Polygons Media LLC. The generic checks were adapted from the private project's publication validator; no private product configuration, scanner, scoring code, prompts, or customer data is included.
+MIT © 2026 Polygons Media LLC.
