@@ -43,3 +43,42 @@ it("external links receive only HTTP and resource-type checks", async () => {
     await close(b.server);
   }
 });
+
+it("checks each HTML and Markdown resource once without duplicate results", async () => {
+  let origin = "";
+  const site = await listen((req, res) => {
+    const path = req.url ?? "";
+    if (path === "/llms.txt") {
+      res.setHeader("content-type", "text/plain");
+      res.end(
+        `# Site\n\n## Pages\n- [Pricing](${origin}/pricing.md)\n- [About](${origin}/about.md)`,
+      );
+    } else if (["/pricing.md", "/about.md"].includes(path)) {
+      res.setHeader("content-type", "text/markdown");
+      res.setHeader("link", '</llms.txt>; rel="describedby"');
+      res.end("# Page");
+    } else if (["/pricing", "/about"].includes(path)) {
+      res.setHeader("content-type", "text/html");
+      res.end(
+        `<html><head><link rel="alternate" type="text/markdown" href="${path}.md"><link rel="describedby" href="/llms.txt"></head><body>Page</body></html>`,
+      );
+    } else {
+      res.statusCode = 404;
+      res.end("Missing");
+    }
+  });
+  origin = site.origin;
+  try {
+    const report = await validate(origin);
+    const keys = report.results.map((r) => `${r.id} ${r.url}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(
+      report.results.filter((r) => r.id === "discovery.describedby"),
+    ).toHaveLength(4);
+    expect(
+      report.summary.pass + report.summary.warn + report.summary.fail,
+    ).toBe(report.results.length);
+  } finally {
+    await close(site.server);
+  }
+});

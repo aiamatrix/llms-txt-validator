@@ -49,6 +49,7 @@ export async function validate(
   const client = new Client(timeout);
   const indexes = new Set<string>();
   const visited = new Set<string>();
+  const checkedDiscovery = new Set<string>();
   const pendingIndexes = new Map<string, Promise<void>>();
   const linkQueue: string[] = [];
   const queued = new Set<string>();
@@ -160,6 +161,9 @@ export async function validate(
     };
     const checkDiscovery = async (r: Resource, html: boolean) => {
       if (!sameOrigin(r.url)) return;
+      const key = `${r.url} ${html ? "html" : "md"}`;
+      if (checkedDiscovery.has(key)) return;
+      checkedDiscovery.add(key);
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -286,19 +290,27 @@ export async function validate(
         url,
       );
   }
-  results.sort(
+  const unique = [
+    ...new Map(
+      results.map((r) => [
+        JSON.stringify([r.id, r.url, r.status, r.message]),
+        r,
+      ]),
+    ).values(),
+  ];
+  unique.sort(
     (a, b) =>
       a.url.localeCompare(b.url) ||
       a.id.localeCompare(b.id) ||
       a.message.localeCompare(b.message),
   );
   const summary = { pass: 0, warn: 0, fail: 0 };
-  for (const r of results) summary[r.status]++;
+  for (const r of unique) summary[r.status]++;
   return {
     version: "1.0",
     url,
     checkedAt: new Date().toISOString(),
     summary,
-    results,
+    results: unique,
   };
 }

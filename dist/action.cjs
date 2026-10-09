@@ -13811,6 +13811,7 @@ async function validate(target, options = {}) {
   const client = new Client(timeout);
   const indexes = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
+  const checkedDiscovery = /* @__PURE__ */ new Set();
   const pendingIndexes = /* @__PURE__ */ new Map();
   const linkQueue = [];
   const queued = /* @__PURE__ */ new Set();
@@ -13919,6 +13920,9 @@ async function validate(target, options = {}) {
     };
     const checkDiscovery = async (r, html) => {
       if (!sameOrigin(r.url)) return;
+      const key = `${r.url} ${html ? "html" : "md"}`;
+      if (checkedDiscovery.has(key)) return;
+      checkedDiscovery.add(key);
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -14031,17 +14035,25 @@ async function validate(target, options = {}) {
         url
       );
   }
-  results.sort(
+  const unique = [
+    ...new Map(
+      results.map((r) => [
+        JSON.stringify([r.id, r.url, r.status, r.message]),
+        r
+      ])
+    ).values()
+  ];
+  unique.sort(
     (a, b) => a.url.localeCompare(b.url) || a.id.localeCompare(b.id) || a.message.localeCompare(b.message)
   );
   const summary = { pass: 0, warn: 0, fail: 0 };
-  for (const r of results) summary[r.status]++;
+  for (const r of unique) summary[r.status]++;
   return {
     version: "1.0",
     url,
     checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
     summary,
-    results
+    results: unique
   };
 }
 
