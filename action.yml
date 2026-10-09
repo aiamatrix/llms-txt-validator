@@ -1,0 +1,15 @@
+name: llms.txt v2 Validator
+description: Check llms.txt format, links, Markdown discovery and scoped indexes
+inputs:
+  url:
+    description: Website URL or llms.txt URL
+    required: true
+  fail-on:
+    description: Fail on error or warn
+    default: error
+  max-links:
+    description: Maximum linked resources to check
+    default: "50"
+runs:
+  using: node20
+  main: dist/action.cjs

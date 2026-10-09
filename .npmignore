@@ -1,0 +1,5 @@
+tests/
+.github/
+.env
+.env.*
+coverage/

@@ -1,0 +1,55 @@
+{
+  "name": "@aiamatrix/llms-txt-validator",
+  "version": "1.0.0",
+  "description": "Validate llms.txt format, linked resources, Markdown discovery and scoped indexes",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "llms-txt-validator": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "THIRD_PARTY_LICENSES.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aiamatrix/llms-txt-validator.git"
+  },
+  "homepage": "https://aiamatrix.com",
+  "scripts": {
+    "build": "tsc && esbuild src/action.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/action.cjs --metafile=.action-metafile.json",
+    "test": "vitest run",
+    "lint": "eslint src tests",
+    "prepublishOnly": "npm run lint && npm test && npm run build",
+    "format": "prettier --write src tests *.md *.json *.mjs .github examples action.yml"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0",
+    "parse5": "^7.2.1"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^20.19.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
