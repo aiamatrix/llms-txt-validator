@@ -1,0 +1,14 @@
+name: Bug report
+description: Report incorrect validation or a tool error
+body:
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Include tool version, Node version, command, and a minimal public or example.com fixture. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected and actual results
+    validations:
+      required: true

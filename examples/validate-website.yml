@@ -1,0 +1,14 @@
+name: Validate llms.txt
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # Available after the first public release. Pin a reviewed commit for stronger reproducibility.
+      - uses: aiamatrix/llms-txt-validator@v1.0.0
+        with:
+          url: https://example.com
+          fail-on: error
+          max-links: "50"

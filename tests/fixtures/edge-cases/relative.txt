@@ -1,0 +1,6 @@
+# Example
+
+- Preamble item
+
+## Docs
+- [Start](/start.md)

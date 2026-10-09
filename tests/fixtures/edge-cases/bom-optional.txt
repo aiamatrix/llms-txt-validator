@@ -1,0 +1,4 @@
+﻿# Example
+
+## Optional
+- [Other](https://example.com/other.md)
