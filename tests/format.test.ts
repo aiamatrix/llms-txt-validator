@@ -30,3 +30,36 @@ describe("v2 format", () => {
         .links,
     ).toEqual(["https://example.com/extra.md"]));
 });
+
+it("extracts links from all supported Markdown forms", () => {
+  for (const name of ["star", "plus", "wrapped", "parentheses", "title"]) {
+    const parsed = format(
+      readFileSync(`tests/fixtures/good/${name}.txt`, "utf8"),
+    );
+    expect(parsed.results.every((r) => r.status === "pass")).toBe(true);
+    expect(parsed.links).toHaveLength(1);
+  }
+  expect(
+    format(readFileSync("tests/fixtures/good/parentheses.txt", "utf8"))
+      .links[0],
+  ).toBe("https://en.wikipedia.org/wiki/Foo_(bar)");
+});
+it("warns on section prose and late summaries while preserving links", () => {
+  expect(
+    format(readFileSync("tests/fixtures/edge-cases/prose-section.txt", "utf8"))
+      .results,
+  ).toContainEqual(
+    expect.objectContaining({ id: "format.section-prose", status: "warn" }),
+  );
+  expect(
+    format(readFileSync("tests/fixtures/edge-cases/late-summary.txt", "utf8"))
+      .results,
+  ).toContainEqual(
+    expect.objectContaining({ id: "format.summary-order", status: "warn" }),
+  );
+  const parsed = format(
+    "# Site\n\n## Pages\nIntro\n\n- Prefix [A](https://e.com/a.md): notes",
+  );
+  expect(parsed.links).toEqual(["https://e.com/a.md"]);
+  expect(parsed.results.some((r) => r.status === "fail")).toBe(false);
+});
