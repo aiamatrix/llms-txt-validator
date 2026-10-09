@@ -5737,6 +5737,14 @@ function checkFormat(input, url) {
 }
 
 // src/network.ts
+function networkMessage(error, timeout) {
+  const e = error;
+  if (e?.name === "AbortError" || e?.name === "TimeoutError")
+    return timeout ? `timed out after ${timeout} ms` : "timed out";
+  const message = e?.message ?? String(error);
+  const cause = [e?.cause?.code, e?.cause?.message].filter(Boolean).join(" ");
+  return cause ? `${message}: ${cause}` : message;
+}
 var Client = class {
   constructor(timeout) {
     this.timeout = timeout;
@@ -5799,6 +5807,10 @@ var Client = class {
         };
       }
       throw Error("More than 10 redirects");
+    } catch (e) {
+      throw new Error(
+        controller.signal.aborted ? `timed out after ${this.timeout} ms` : networkMessage(e, this.timeout)
+      );
     } finally {
       clearTimeout(timer);
     }
@@ -13875,7 +13887,7 @@ async function validate(target, options = {}) {
         results.push(...parsed.results);
         for (const l of parsed.links) enqueue(l, r.url);
       } catch (e) {
-        add2("file.fetch", "fail", String(e), indexUrl);
+        add2("file.fetch", "fail", networkMessage(e, timeout), indexUrl);
       }
     })();
     pendingIndexes.set(indexUrl, pending);
@@ -13914,7 +13926,12 @@ async function validate(target, options = {}) {
               candidate
             );
         } catch (e) {
-          add2("scope.unavailable", "warn", String(e), candidate);
+          add2(
+            "scope.unavailable",
+            "warn",
+            networkMessage(e, timeout),
+            candidate
+          );
         }
       }
     };
@@ -14023,7 +14040,7 @@ async function validate(target, options = {}) {
               );
           }
         } catch (e) {
-          add2("links.fetch", "fail", String(e), link2);
+          add2("links.fetch", "fail", networkMessage(e, timeout), link2);
         }
       });
     }

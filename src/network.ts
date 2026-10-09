@@ -1,5 +1,17 @@
 import { VERSION } from "./spec.js";
 import type { Resource } from "./types.js";
+export function networkMessage(error: unknown, timeout?: number): string {
+  const e = error as {
+    name?: string;
+    message?: string;
+    cause?: { code?: string; message?: string };
+  };
+  if (e?.name === "AbortError" || e?.name === "TimeoutError")
+    return timeout ? `timed out after ${timeout} ms` : "timed out";
+  const message = e?.message ?? String(error);
+  const cause = [e?.cause?.code, e?.cause?.message].filter(Boolean).join(" ");
+  return cause ? `${message}: ${cause}` : message;
+}
 export class Client {
   private cache = new Map<string, Promise<Resource>>();
   constructor(private timeout: number) {}
@@ -60,6 +72,12 @@ export class Client {
         };
       }
       throw Error("More than 10 redirects");
+    } catch (e) {
+      throw new Error(
+        controller.signal.aborted
+          ? `timed out after ${this.timeout} ms`
+          : networkMessage(e, this.timeout),
+      );
     } finally {
       clearTimeout(timer);
     }

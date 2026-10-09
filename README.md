@@ -112,6 +112,8 @@ Tool errors in JSON mode use `{"version":"1.0","error":{"message":"..."}}` and e
 
 ## Network behavior and limitations
 
+Node's built-in fetch ignores HTTP_PROXY and HTTPS_PROXY by default. On Node 24+, set `NODE_USE_ENV_PROXY=1` to use environment proxy settings. For a custom certificate authority, set `NODE_EXTRA_CA_CERTS` to the path of its PEM certificate file before starting Node.
+
 - At most five link-validation tasks run concurrently. Ancillary requests within each task are sequential. Responses are cached per method and URL.
 - User-Agent: `aiamatrix-llms-txt-validator/1.0.0 (+https://github.com/aiamatrix/llms-txt-validator)`.
 - Redirect loops and chains beyond ten redirects fail. Response bodies are capped at 2 MiB for resource safety.

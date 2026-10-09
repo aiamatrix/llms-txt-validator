@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkFormat } from "./format.js";
-import { Client, pooled } from "./network.js";
+import { Client, pooled, networkMessage } from "./network.js";
 import { relations, hasRel } from "./discovery.js";
 import { markdownCandidates, pageCandidates } from "./markdown-versions.js";
 import { scopedCandidates, applicable } from "./scope.js";
@@ -116,7 +116,7 @@ export async function validate(
         results.push(...parsed.results);
         for (const l of parsed.links) enqueue(l, r.url);
       } catch (e) {
-        add("file.fetch", "fail", String(e), indexUrl);
+        add("file.fetch", "fail", networkMessage(e, timeout), indexUrl);
       }
     })();
     pendingIndexes.set(indexUrl, pending);
@@ -155,7 +155,12 @@ export async function validate(
               candidate,
             );
         } catch (e) {
-          add("scope.unavailable", "warn", String(e), candidate);
+          add(
+            "scope.unavailable",
+            "warn",
+            networkMessage(e, timeout),
+            candidate,
+          );
         }
       }
     };
@@ -278,7 +283,7 @@ export async function validate(
               );
           }
         } catch (e) {
-          add("links.fetch", "fail", String(e), link);
+          add("links.fetch", "fail", networkMessage(e, timeout), link);
         }
       });
     }
