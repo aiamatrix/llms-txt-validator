@@ -141,7 +141,7 @@ export function checkFormat(input: string, url: string): Parsed {
   close();
   results.push({
     id: "file.size",
-    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "pass",
+    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "info",
     message:
       "Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).",
     specRef: SPEC.proposal,

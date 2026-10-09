@@ -97,7 +97,7 @@ export async function validate(target, options = {}) {
             throw Error("--no-network requires a local file; a remote URL cannot be checked without fetching it");
         const text = await readFile(resolve(target), "utf8");
         results.push(...checkFormat(text, url).results);
-        add("network.skipped", "pass", "Format-only mode: network, discovery and scope checks were not performed.", url);
+        add("network.skipped", "info", "Format-only mode: network, discovery and scope checks were not performed.", url);
     }
     else {
         await index(url);
@@ -223,7 +223,7 @@ export async function validate(target, options = {}) {
     unique.sort((a, b) => a.url.localeCompare(b.url) ||
         a.id.localeCompare(b.id) ||
         a.message.localeCompare(b.message));
-    const summary = { pass: 0, warn: 0, fail: 0 };
+    const summary = { pass: 0, info: 0, warn: 0, fail: 0 };
     for (const r of unique)
         summary[r.status]++;
     return {

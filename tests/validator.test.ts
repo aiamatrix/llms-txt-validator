@@ -76,7 +76,10 @@ it("checks each HTML and Markdown resource once without duplicate results", asyn
       report.results.filter((r) => r.id === "discovery.describedby"),
     ).toHaveLength(4);
     expect(
-      report.summary.pass + report.summary.warn + report.summary.fail,
+      report.summary.pass +
+        report.summary.info +
+        report.summary.warn +
+        report.summary.fail,
     ).toBe(report.results.length);
   } finally {
     await close(site.server);

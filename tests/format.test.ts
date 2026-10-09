@@ -36,7 +36,9 @@ it("extracts links from all supported Markdown forms", () => {
     const parsed = format(
       readFileSync(`tests/fixtures/good/${name}.txt`, "utf8"),
     );
-    expect(parsed.results.every((r) => r.status === "pass")).toBe(true);
+    expect(
+      parsed.results.every((r) => r.status === "pass" || r.status === "info"),
+    ).toBe(true);
     expect(parsed.links).toHaveLength(1);
   }
   expect(

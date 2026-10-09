@@ -36,7 +36,7 @@ node dist/cli.js https://example.com
 
 Local files always receive format-only validation. Their linked files, discovery relations, and scopes are not checked, regardless of the flag. A `network.skipped` result identifies this limitation. Website URLs use `/llms.txt`; a path such as `https://example.com/docs/` uses `/docs/llms.txt`.
 
-Exit codes: **0** means no findings at the configured failure threshold; **1** means validation findings reached that threshold; **2** means a tool error such as invalid arguments or an unreadable local file. A remote resource failure is a validation failure, not a tool error. Warnings may exist with exit code 0.
+Exit codes: **0** means no findings at the configured failure threshold; **1** means validation findings reached that threshold; **2** means a tool error such as invalid arguments or an unreadable local file. A remote resource failure is a validation failure, not a tool error. Warnings may exist with exit code 0. Informational results never affect exit codes.
 
 ## What it checks
 
@@ -93,7 +93,7 @@ A successful tool invocation emits exactly these top-level fields:
   "version": "1.0",
   "url": "https://example.com/llms.txt",
   "checkedAt": "2026-10-08T00:00:00.000Z",
-  "summary": { "pass": 1, "warn": 0, "fail": 0 },
+  "summary": { "pass": 1, "info": 0, "warn": 0, "fail": 0 },
   "results": [
     {
       "id": "file.http",
@@ -106,7 +106,7 @@ A successful tool invocation emits exactly these top-level fields:
 }
 ```
 
-`version` is the report-schema version, not the npm version. `checkedAt` is an ISO-8601 UTC timestamp. Summary values are nonnegative integer result counts. Results contain `id`, `status`, `message`, `specRef`, and `url`; statuses are `pass`, `warn`, or `fail`. IDs identify check categories and can recur for different resources. `format.section.N` numbers sections within one index. Results are sorted by URL, ID, and message. Do not parse human messages as an API. Local targets use `file:` URLs.
+`version` is the report-schema version, not the npm version. `checkedAt` is an ISO-8601 UTC timestamp. Summary values are nonnegative integer result counts. Results contain `id`, `status`, `message`, `specRef`, and `url`; statuses are `pass`, `info`, `warn`, or `fail`. IDs identify check categories and can recur for different resources. `format.section.N` numbers sections within one index. Results are sorted by URL, ID, and message. Do not parse human messages as an API. Local targets use `file:` URLs.
 
 Tool errors in JSON mode use `{"version":"1.0","error":{"message":"..."}}` and exit code 2. They do not emit a validation report or the product-report line. Help and version options print their requested text.
 

@@ -5728,7 +5728,7 @@ function checkFormat(input, url) {
   close();
   results.push({
     id: "file.size",
-    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "pass",
+    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "info",
     message: "Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).",
     specRef: SPEC.proposal,
     url
@@ -13902,7 +13902,7 @@ async function validate(target, options = {}) {
     results.push(...checkFormat(text2, url).results);
     add2(
       "network.skipped",
-      "pass",
+      "info",
       "Format-only mode: network, discovery and scope checks were not performed.",
       url
     );
@@ -14063,7 +14063,7 @@ async function validate(target, options = {}) {
   unique.sort(
     (a, b) => a.url.localeCompare(b.url) || a.id.localeCompare(b.id) || a.message.localeCompare(b.message)
   );
-  const summary = { pass: 0, warn: 0, fail: 0 };
+  const summary = { pass: 0, info: 0, warn: 0, fail: 0 };
   for (const r of unique) summary[r.status]++;
   return {
     version: "1.0",
@@ -14093,7 +14093,7 @@ function human(report) {
   return [...groups].map(([k, v]) => `${k}
 ${v.join("\n")}`).join("\n\n") + `
 
-Summary: ${report.summary.pass} pass, ${report.summary.warn} warn, ${report.summary.fail} fail
+Summary: ${report.summary.pass} pass, ${report.summary.info} info, ${report.summary.warn} warn, ${report.summary.fail} fail
 Get a full AI-readiness report: https://aiamatrix.com`;
 }
 
@@ -14130,7 +14130,7 @@ async function main() {
       process.env.GITHUB_STEP_SUMMARY,
       `## llms.txt validation
 
-${report.summary.pass} pass \xB7 ${report.summary.warn} warn \xB7 ${report.summary.fail} fail
+${report.summary.pass} pass \xB7 ${report.summary.info} info \xB7 ${report.summary.warn} warn \xB7 ${report.summary.fail} fail
 
 <pre>${escape3(human(report))}</pre>
 `

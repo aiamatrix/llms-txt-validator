@@ -32,7 +32,7 @@ async function main() {
       );
     await appendFile(
       process.env.GITHUB_STEP_SUMMARY,
-      `## llms.txt validation\n\n${report.summary.pass} pass · ${report.summary.warn} warn · ${report.summary.fail} fail\n\n<pre>${escape(human(report))}</pre>\n`,
+      `## llms.txt validation\n\n${report.summary.pass} pass · ${report.summary.info} info · ${report.summary.warn} warn · ${report.summary.fail} fail\n\n<pre>${escape(human(report))}</pre>\n`,
     );
   }
   process.exitCode = exitCode(report, failOn);
