@@ -1,4 +1,4 @@
-export const VERSION = "1.0.0";
+export { VERSION } from "./version.js";
 export const SPEC = {
   format: "https://llmstxt.org/#format",
   proposal: "https://llmstxt.org/#proposal",

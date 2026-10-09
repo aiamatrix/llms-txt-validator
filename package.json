@@ -29,11 +29,12 @@
   },
   "homepage": "https://aiamatrix.com",
   "scripts": {
-    "build": "tsc && esbuild src/action.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/action.cjs --metafile=.action-metafile.json",
+    "build": "tsc && esbuild src/action.ts --bundle --platform=node --target=node24 --format=cjs --outfile=dist/action.cjs --metafile=.action-metafile.json",
     "test": "vitest run",
     "lint": "eslint src tests",
     "prepublishOnly": "npm run lint && npm test && npm run build",
-    "format": "prettier --write src tests *.md *.json *.mjs .github examples action.yml"
+    "format": "prettier --write src tests *.md *.json *.mjs .github examples action.yml",
+    "prebuild": "node scripts/generate-version.mjs"
   },
   "dependencies": {
     "markdown-it": "^14.1.0",

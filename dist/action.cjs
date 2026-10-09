@@ -5602,8 +5602,10 @@ MarkdownIt.prototype.renderInline = function(src, env) {
 };
 var lib_default = MarkdownIt;
 
-// src/spec.ts
+// src/version.ts
 var VERSION = "1.0.0";
+
+// src/spec.ts
 var SPEC = {
   format: "https://llmstxt.org/#format",
   proposal: "https://llmstxt.org/#proposal",
