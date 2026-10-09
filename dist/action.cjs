@@ -13806,6 +13806,8 @@ async function validate(target, options = {}) {
     }
     url = u.href;
   }
+  let rootOrigin = remote ? new URL(url).origin : "";
+  const sameOrigin = (resourceUrl) => new URL(resourceUrl).origin === rootOrigin;
   const client = new Client(timeout);
   const indexes = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
@@ -13853,6 +13855,7 @@ async function validate(target, options = {}) {
           indexUrl
         );
         if (r.status !== 200) return;
+        if (indexUrl === url) rootOrigin = new URL(r.url).origin;
         indexes.add(indexUrl);
         add2(
           "file.content-type",
@@ -13893,6 +13896,7 @@ async function validate(target, options = {}) {
   } else {
     await index(url);
     const discoverScope = async (page) => {
+      if (!sameOrigin(page)) return;
       for (const candidate of scopedCandidates(page)) {
         if (visited.has(candidate)) {
           await pendingIndexes.get(candidate);
@@ -13914,6 +13918,7 @@ async function validate(target, options = {}) {
       }
     };
     const checkDiscovery = async (r, html) => {
+      if (!sameOrigin(r.url)) return;
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -13974,7 +13979,7 @@ async function validate(target, options = {}) {
             link2
           );
           if (head.status !== 200) return;
-          if (new URL(link2).pathname.endsWith("/llms.txt")) {
+          if (sameOrigin(link2) && sameOrigin(head.url) && new URL(link2).pathname.endsWith("/llms.txt")) {
             await index(link2);
             return;
           }
@@ -13990,6 +13995,7 @@ async function validate(target, options = {}) {
             html ? "Linked resource is HTML rather than Markdown or text." : "Check linked resource content type.",
             link2
           );
+          if (!sameOrigin(link2) || !sameOrigin(r.url)) return;
           await checkDiscovery(r, html);
           if (!html && new URL(r.url).pathname.endsWith(".md")) {
             let found = false;

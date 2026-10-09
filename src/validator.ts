@@ -43,6 +43,9 @@ export async function validate(
     }
     url = u.href;
   }
+  let rootOrigin = remote ? new URL(url).origin : "";
+  const sameOrigin = (resourceUrl: string) =>
+    new URL(resourceUrl).origin === rootOrigin;
   const client = new Client(timeout);
   const indexes = new Set<string>();
   const visited = new Set<string>();
@@ -93,6 +96,7 @@ export async function validate(
           indexUrl,
         );
         if (r.status !== 200) return;
+        if (indexUrl === url) rootOrigin = new URL(r.url).origin;
         indexes.add(indexUrl);
         add(
           "file.content-type",
@@ -133,6 +137,7 @@ export async function validate(
   } else {
     await index(url);
     const discoverScope = async (page: string) => {
+      if (!sameOrigin(page)) return;
       for (const candidate of scopedCandidates(page)) {
         if (visited.has(candidate)) {
           await pendingIndexes.get(candidate);
@@ -154,6 +159,7 @@ export async function validate(
       }
     };
     const checkDiscovery = async (r: Resource, html: boolean) => {
+      if (!sameOrigin(r.url)) return;
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -221,7 +227,11 @@ export async function validate(
             link,
           );
           if (head.status !== 200) return;
-          if (new URL(link).pathname.endsWith("/llms.txt")) {
+          if (
+            sameOrigin(link) &&
+            sameOrigin(head.url) &&
+            new URL(link).pathname.endsWith("/llms.txt")
+          ) {
             await index(link);
             return;
           }
@@ -239,6 +249,7 @@ export async function validate(
               : "Check linked resource content type.",
             link,
           );
+          if (!sameOrigin(link) || !sameOrigin(r.url)) return;
           await checkDiscovery(r, html);
           if (!html && new URL(r.url).pathname.endsWith(".md")) {
             let found = false;

@@ -29,6 +29,8 @@ export async function validate(target, options = {}) {
         }
         url = u.href;
     }
+    let rootOrigin = remote ? new URL(url).origin : "";
+    const sameOrigin = (resourceUrl) => new URL(resourceUrl).origin === rootOrigin;
     const client = new Client(timeout);
     const indexes = new Set();
     const visited = new Set();
@@ -70,6 +72,8 @@ export async function validate(target, options = {}) {
                 add("file.http", r.status === 200 ? "pass" : "fail", `llms.txt returned HTTP ${r.status}.`, indexUrl);
                 if (r.status !== 200)
                     return;
+                if (indexUrl === url)
+                    rootOrigin = new URL(r.url).origin;
                 indexes.add(indexUrl);
                 add("file.content-type", isText(r) ? "pass" : "fail", "llms.txt must use text/plain or text/markdown.", indexUrl);
                 add("file.not-html", isHtml(r) ? "fail" : "pass", "llms.txt must not be an HTML document.", indexUrl);
@@ -97,6 +101,8 @@ export async function validate(target, options = {}) {
     else {
         await index(url);
         const discoverScope = async (page) => {
+            if (!sameOrigin(page))
+                return;
             for (const candidate of scopedCandidates(page)) {
                 if (visited.has(candidate)) {
                     await pendingIndexes.get(candidate);
@@ -115,6 +121,8 @@ export async function validate(target, options = {}) {
             }
         };
         const checkDiscovery = async (r, html) => {
+            if (!sameOrigin(r.url))
+                return;
             await discoverScope(r.url);
             const expected = applicable(r.url, [...indexes]);
             const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -156,7 +164,9 @@ export async function validate(target, options = {}) {
                     add("links.http", head.status === 200 ? "pass" : "fail", `Linked resource returned HTTP ${head.status}.`, link);
                     if (head.status !== 200)
                         return;
-                    if (new URL(link).pathname.endsWith("/llms.txt")) {
+                    if (sameOrigin(link) &&
+                        sameOrigin(head.url) &&
+                        new URL(link).pathname.endsWith("/llms.txt")) {
                         await index(link);
                         return;
                     }
@@ -169,6 +179,8 @@ export async function validate(target, options = {}) {
                     add("links.resource-type", html || !isText(r) ? "warn" : "pass", html
                         ? "Linked resource is HTML rather than Markdown or text."
                         : "Check linked resource content type.", link);
+                    if (!sameOrigin(link) || !sameOrigin(r.url))
+                        return;
                     await checkDiscovery(r, html);
                     if (!html && new URL(r.url).pathname.endsWith(".md")) {
                         let found = false;
