@@ -26,7 +26,7 @@ This tool checks file structure and selected publication signals. It does not me
 
 ## Install and run
 
-Requires Node.js 22 or newer. The following npm and Action examples become available after publication.
+Requires Node.js 22 or newer.
 
 The npm package is published as `@aia-matrix/llms-txt-validator`; the GitHub repository and Action use `aiamatrix/llms-txt-validator`.
 

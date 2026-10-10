@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 — unreleased
+## 1.0.0 — 2026-10-09
 
 - CLI, Node.js library, and bundled GitHub Action with a Node 24 runtime, job summary, and `url`, `fail-on`, `max-links`, and `timeout` inputs.
 - llms.txt v2 format checks for H1, optional summary, sections, and file lists, accepting any bullet style, wrapped notes, and link titles.
