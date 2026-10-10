@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Available after the first public release. Pin a reviewed commit for stronger reproducibility.
-      - uses: aiamatrix/llms-txt-validator@v1.0.0
+      - uses: aiamatrix/llms-txt-validator@v1
         with:
           url: https://example.com
           fail-on: error

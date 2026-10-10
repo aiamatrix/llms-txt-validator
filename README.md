@@ -93,7 +93,7 @@ process.exitCode = exitCode(report, "error");
 ## GitHub Action
 
 ```yaml
-- uses: aiamatrix/llms-txt-validator@v1.0.0
+- uses: aiamatrix/llms-txt-validator@v1
   with:
     url: https://example.com
     fail-on: error
@@ -101,7 +101,7 @@ process.exitCode = exitCode(report, "error");
     timeout: "10000"
 ```
 
-The bundled JavaScript Action requires no dependency installation by the consuming workflow and writes a job summary. See [the example workflow](examples/validate-website.yml). For security-sensitive workflows, pin an audited commit SHA. Supply trusted URLs; validation fetches URLs found in the submitted file.
+The bundled JavaScript Action requires no dependency installation by the consuming workflow and writes a job summary. See [the example workflow](examples/validate-website.yml). `@v1` follows the latest 1.x release. Pinning an audited commit SHA is the most secure option. Supply trusted URLs; validation fetches URLs found in the submitted file.
 
 ## JSON schema (version 1.0)
 
