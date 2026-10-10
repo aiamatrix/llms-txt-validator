@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node.js 22.13 or newer for development (Node 24 is recommended). The published library and CLI support Node.js 20+, which CI checks separately without development dependencies. Install with `npm ci`, then run `npm run lint`, `npm test`, and `npm run build`. Commit generated `dist/` changes with source changes. Add a fixture or mocked HTTP test for changed validation behavior.
+Use Node.js 22.13 or newer for development (Node 24 is recommended). The published library and CLI support Node.js 22+, with built CLI and library smoke checks in the Node 22 CI matrix leg. Install with `npm ci`, then run `npm run lint`, `npm test`, and `npm run build`. Commit generated `dist/` changes with source changes. Add a fixture or mocked HTTP test for changed validation behavior.
 
 Keep specification requirements separate from recommendations and tool policy. Include a specification reference when proposing a check. Avoid promises about citations, rankings, or traffic.
 

@@ -20,14 +20,8 @@ jobs:
       - run: npm run build
       - run: git diff --exit-code -- dist
       - run: npm pack --dry-run
-  node20-runtime:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci --omit=dev
-      - run: node dist/cli.js tests/fixtures/good/basic.txt --json
-      - run: node --input-type=module -e "import { validate, exitCode } from './dist/index.js'; process.exitCode = exitCode(await validate('tests/fixtures/good/basic.txt'));"
+      - name: Verify minimum Node.js runtime
+        if: matrix.node == 22
+        run: |
+          node dist/cli.js tests/fixtures/good/basic.txt --json
+          node --input-type=module -e "import { validate, exitCode } from './dist/index.js'; process.exitCode = exitCode(await validate('tests/fixtures/good/basic.txt'));"

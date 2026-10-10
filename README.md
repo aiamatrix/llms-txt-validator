@@ -26,7 +26,7 @@ This tool checks file structure and selected publication signals. It does not me
 
 ## Install and run
 
-Requires Node.js 20 or newer. The following npm and Action examples become available after publication.
+Requires Node.js 22 or newer. The following npm and Action examples become available after publication.
 
 ```sh
 npx @aiamatrix/llms-txt-validator https://example.com
