@@ -1,5 +1,5 @@
 {
-  "name": "@aiamatrix/llms-txt-validator",
+  "name": "@aia-matrix/llms-txt-validator",
   "version": "1.0.0",
   "description": "Validate llms.txt format, linked resources, Markdown discovery and scoped indexes",
   "type": "module",
