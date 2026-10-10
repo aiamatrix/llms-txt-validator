@@ -28,10 +28,12 @@ This tool checks file structure and selected publication signals. It does not me
 
 Requires Node.js 22 or newer. The following npm and Action examples become available after publication.
 
+The npm package is published as `@aia-matrix/llms-txt-validator`; the GitHub repository and Action use `aiamatrix/llms-txt-validator`.
+
 ```sh
-npx @aiamatrix/llms-txt-validator https://example.com
-npx @aiamatrix/llms-txt-validator ./public/llms.txt
-npx @aiamatrix/llms-txt-validator ./public/llms.txt --no-network --json
+npx @aia-matrix/llms-txt-validator https://example.com
+npx @aia-matrix/llms-txt-validator ./public/llms.txt
+npx @aia-matrix/llms-txt-validator ./public/llms.txt --no-network --json
 ```
 
 From source (use Node.js 22.13+ for development; Node 24 is recommended):
@@ -78,7 +80,7 @@ The parser accepts a UTF-8 BOM, relative URLs, CRLF, a title-only file, and Mark
 ## Node.js library
 
 ```ts
-import { validate, exitCode } from "@aiamatrix/llms-txt-validator";
+import { validate, exitCode } from "@aia-matrix/llms-txt-validator";
 const report = await validate("https://example.com", {
   maxLinks: 50,
   timeout: 10000,
