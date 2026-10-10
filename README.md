@@ -6,14 +6,17 @@ A standalone CLI, Node.js library, and GitHub Action for checking the [llms.txt 
 
 ## Example output
 
-Excerpt from a CLI run against a small local fixture site. Its HTML page intentionally omits the Markdown alternate relation.
+Excerpt from `node dist/cli.js tests/fixtures/good/basic.txt`, with resource URLs and specification references omitted.
 
 ```text
-  PASS file.http: llms.txt returned HTTP 200.
-  INFO file.size: Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).
-  WARN discovery.alternate: HTML should advertise a text/markdown alternate.
+  INFO file.size: llms.txt is 113 B (guidance: 50 KiB or less; not a spec requirement).
+  PASS format.h1: File must begin with exactly one nonempty H1.
+  PASS format.heading-levels: Only H1 and H2 headings are allowed.
+  PASS format.section.1: Each H2 section must contain nonempty link-list items.
+  PASS format.summary-order: Summary precedes the non-heading preamble.
+  INFO network.skipped: Format-only mode: network, discovery and scope checks were not performed.
 
-Summary: 14 pass, 1 info, 1 warn, 0 fail
+Summary: 4 pass, 2 info, 0 warn, 0 fail
 Get a full AI-readiness report: https://aiamatrix.com
 ```
 

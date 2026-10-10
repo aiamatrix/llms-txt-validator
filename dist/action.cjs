@@ -5732,10 +5732,12 @@ function checkFormat(input, url) {
       );
   }
   close();
+  const bytes = Buffer.byteLength(input);
+  const size = bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${bytes} B`;
   results.push({
     id: "file.size",
-    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "info",
-    message: "Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).",
+    status: bytes > 50 * 1024 ? "warn" : "info",
+    message: bytes > 50 * 1024 ? `llms.txt is ${size}, above the 50 KiB guidance; agents may truncate or skip it (not a spec requirement).` : `llms.txt is ${size} (guidance: 50 KiB or less; not a spec requirement).`,
     specRef: SPEC.proposal,
     url
   });

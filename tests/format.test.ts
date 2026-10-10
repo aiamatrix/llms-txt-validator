@@ -18,12 +18,23 @@ describe("v2 format", () => {
           (r) => r.status === "fail",
         ),
       ).toBe(true));
-  it("size is a warning", () =>
+  it.each([
+    ["# Site\n", "7 B", "info"],
+    ["# Site\n" + "a".repeat(1222), "1.2 KiB", "info"],
+    ["# Site\n" + "a".repeat(64915), "63.4 KiB", "warn"],
+    ["# Site\n" + "a".repeat(51193), "50.0 KiB", "info"],
+    ["\uFEFF# Site\n" + "é".repeat(4), "18 B", "info"],
+  ])("reports raw size %s as %s (%s)", (input, size, status) => {
     expect(
-      format("# Site\n\n" + "a".repeat(51201)).results.find(
-        (r) => r.id === "file.size",
-      )?.status,
-    ).toBe("warn"));
+      format(input).results.find((r) => r.id === "file.size"),
+    ).toMatchObject({
+      status,
+      message:
+        status === "warn"
+          ? `llms.txt is ${size}, above the 50 KiB guidance; agents may truncate or skip it (not a spec requirement).`
+          : `llms.txt is ${size} (guidance: 50 KiB or less; not a spec requirement).`,
+    });
+  });
   it("Optional links are not omitted", () =>
     expect(
       format("# Site\n\n## Optional\n- [Extra](https://example.com/extra.md)")
