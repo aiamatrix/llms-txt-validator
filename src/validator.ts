@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkFormat } from "./format.js";
-import { Client, pooled } from "./network.js";
+import { Client, pooled, networkMessage } from "./network.js";
 import { relations, hasRel } from "./discovery.js";
 import { markdownCandidates, pageCandidates } from "./markdown-versions.js";
 import { scopedCandidates, applicable } from "./scope.js";
@@ -43,9 +43,13 @@ export async function validate(
     }
     url = u.href;
   }
+  let rootOrigin = remote ? new URL(url).origin : "";
+  const sameOrigin = (resourceUrl: string) =>
+    new URL(resourceUrl).origin === rootOrigin;
   const client = new Client(timeout);
   const indexes = new Set<string>();
   const visited = new Set<string>();
+  const checkedDiscovery = new Set<string>();
   const pendingIndexes = new Map<string, Promise<void>>();
   const linkQueue: string[] = [];
   const queued = new Set<string>();
@@ -93,6 +97,7 @@ export async function validate(
           indexUrl,
         );
         if (r.status !== 200) return;
+        if (indexUrl === url) rootOrigin = new URL(r.url).origin;
         indexes.add(indexUrl);
         add(
           "file.content-type",
@@ -111,7 +116,7 @@ export async function validate(
         results.push(...parsed.results);
         for (const l of parsed.links) enqueue(l, r.url);
       } catch (e) {
-        add("file.fetch", "fail", String(e), indexUrl);
+        add("file.fetch", "fail", networkMessage(e, timeout), indexUrl);
       }
     })();
     pendingIndexes.set(indexUrl, pending);
@@ -126,13 +131,14 @@ export async function validate(
     results.push(...checkFormat(text, url).results);
     add(
       "network.skipped",
-      "pass",
+      "info",
       "Format-only mode: network, discovery and scope checks were not performed.",
       url,
     );
   } else {
     await index(url);
     const discoverScope = async (page: string) => {
+      if (!sameOrigin(page)) return;
       for (const candidate of scopedCandidates(page)) {
         if (visited.has(candidate)) {
           await pendingIndexes.get(candidate);
@@ -149,11 +155,20 @@ export async function validate(
               candidate,
             );
         } catch (e) {
-          add("scope.unavailable", "warn", String(e), candidate);
+          add(
+            "scope.unavailable",
+            "warn",
+            networkMessage(e, timeout),
+            candidate,
+          );
         }
       }
     };
     const checkDiscovery = async (r: Resource, html: boolean) => {
+      if (!sameOrigin(r.url)) return;
+      const key = `${r.url} ${html ? "html" : "md"}`;
+      if (checkedDiscovery.has(key)) return;
+      checkedDiscovery.add(key);
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -221,7 +236,11 @@ export async function validate(
             link,
           );
           if (head.status !== 200) return;
-          if (new URL(link).pathname.endsWith("/llms.txt")) {
+          if (
+            sameOrigin(link) &&
+            sameOrigin(head.url) &&
+            new URL(link).pathname.endsWith("/llms.txt")
+          ) {
             await index(link);
             return;
           }
@@ -239,6 +258,7 @@ export async function validate(
               : "Check linked resource content type.",
             link,
           );
+          if (!sameOrigin(link) || !sameOrigin(r.url)) return;
           await checkDiscovery(r, html);
           if (!html && new URL(r.url).pathname.endsWith(".md")) {
             let found = false;
@@ -263,7 +283,7 @@ export async function validate(
               );
           }
         } catch (e) {
-          add("links.fetch", "fail", String(e), link);
+          add("links.fetch", "fail", networkMessage(e, timeout), link);
         }
       });
     }
@@ -275,19 +295,27 @@ export async function validate(
         url,
       );
   }
-  results.sort(
+  const unique = [
+    ...new Map(
+      results.map((r) => [
+        JSON.stringify([r.id, r.url, r.status, r.message]),
+        r,
+      ]),
+    ).values(),
+  ];
+  unique.sort(
     (a, b) =>
       a.url.localeCompare(b.url) ||
       a.id.localeCompare(b.id) ||
       a.message.localeCompare(b.message),
   );
-  const summary = { pass: 0, warn: 0, fail: 0 };
-  for (const r of results) summary[r.status]++;
+  const summary = { pass: 0, info: 0, warn: 0, fail: 0 };
+  for (const r of unique) summary[r.status]++;
   return {
     version: "1.0",
     url,
     checkedAt: new Date().toISOString(),
     summary,
-    results,
+    results: unique,
   };
 }

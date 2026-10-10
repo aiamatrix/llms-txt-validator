@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkFormat } from "./format.js";
-import { Client, pooled } from "./network.js";
+import { Client, pooled, networkMessage } from "./network.js";
 import { relations, hasRel } from "./discovery.js";
 import { markdownCandidates, pageCandidates } from "./markdown-versions.js";
 import { scopedCandidates, applicable } from "./scope.js";
@@ -29,9 +29,12 @@ export async function validate(target, options = {}) {
         }
         url = u.href;
     }
+    let rootOrigin = remote ? new URL(url).origin : "";
+    const sameOrigin = (resourceUrl) => new URL(resourceUrl).origin === rootOrigin;
     const client = new Client(timeout);
     const indexes = new Set();
     const visited = new Set();
+    const checkedDiscovery = new Set();
     const pendingIndexes = new Map();
     const linkQueue = [];
     const queued = new Set();
@@ -70,6 +73,8 @@ export async function validate(target, options = {}) {
                 add("file.http", r.status === 200 ? "pass" : "fail", `llms.txt returned HTTP ${r.status}.`, indexUrl);
                 if (r.status !== 200)
                     return;
+                if (indexUrl === url)
+                    rootOrigin = new URL(r.url).origin;
                 indexes.add(indexUrl);
                 add("file.content-type", isText(r) ? "pass" : "fail", "llms.txt must use text/plain or text/markdown.", indexUrl);
                 add("file.not-html", isHtml(r) ? "fail" : "pass", "llms.txt must not be an HTML document.", indexUrl);
@@ -81,7 +86,7 @@ export async function validate(target, options = {}) {
                     enqueue(l, r.url);
             }
             catch (e) {
-                add("file.fetch", "fail", String(e), indexUrl);
+                add("file.fetch", "fail", networkMessage(e, timeout), indexUrl);
             }
         })();
         pendingIndexes.set(indexUrl, pending);
@@ -92,11 +97,13 @@ export async function validate(target, options = {}) {
             throw Error("--no-network requires a local file; a remote URL cannot be checked without fetching it");
         const text = await readFile(resolve(target), "utf8");
         results.push(...checkFormat(text, url).results);
-        add("network.skipped", "pass", "Format-only mode: network, discovery and scope checks were not performed.", url);
+        add("network.skipped", "info", "Format-only mode: network, discovery and scope checks were not performed.", url);
     }
     else {
         await index(url);
         const discoverScope = async (page) => {
+            if (!sameOrigin(page))
+                return;
             for (const candidate of scopedCandidates(page)) {
                 if (visited.has(candidate)) {
                     await pendingIndexes.get(candidate);
@@ -110,11 +117,17 @@ export async function validate(target, options = {}) {
                         add("scope.unavailable", "warn", `Scope probe returned HTTP ${r.status}; coverage is incomplete.`, candidate);
                 }
                 catch (e) {
-                    add("scope.unavailable", "warn", String(e), candidate);
+                    add("scope.unavailable", "warn", networkMessage(e, timeout), candidate);
                 }
             }
         };
         const checkDiscovery = async (r, html) => {
+            if (!sameOrigin(r.url))
+                return;
+            const key = `${r.url} ${html ? "html" : "md"}`;
+            if (checkedDiscovery.has(key))
+                return;
+            checkedDiscovery.add(key);
             await discoverScope(r.url);
             const expected = applicable(r.url, [...indexes]);
             const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -156,7 +169,9 @@ export async function validate(target, options = {}) {
                     add("links.http", head.status === 200 ? "pass" : "fail", `Linked resource returned HTTP ${head.status}.`, link);
                     if (head.status !== 200)
                         return;
-                    if (new URL(link).pathname.endsWith("/llms.txt")) {
+                    if (sameOrigin(link) &&
+                        sameOrigin(head.url) &&
+                        new URL(link).pathname.endsWith("/llms.txt")) {
                         await index(link);
                         return;
                     }
@@ -169,6 +184,8 @@ export async function validate(target, options = {}) {
                     add("links.resource-type", html || !isText(r) ? "warn" : "pass", html
                         ? "Linked resource is HTML rather than Markdown or text."
                         : "Check linked resource content type.", link);
+                    if (!sameOrigin(link) || !sameOrigin(r.url))
+                        return;
                     await checkDiscovery(r, html);
                     if (!html && new URL(r.url).pathname.endsWith(".md")) {
                         let found = false;
@@ -190,24 +207,30 @@ export async function validate(target, options = {}) {
                     }
                 }
                 catch (e) {
-                    add("links.fetch", "fail", String(e), link);
+                    add("links.fetch", "fail", networkMessage(e, timeout), link);
                 }
             });
         }
         if (truncated)
             add("links.limit", "warn", `Link limit ${max} reached; remaining linked resources were not checked.`, url);
     }
-    results.sort((a, b) => a.url.localeCompare(b.url) ||
+    const unique = [
+        ...new Map(results.map((r) => [
+            JSON.stringify([r.id, r.url, r.status, r.message]),
+            r,
+        ])).values(),
+    ];
+    unique.sort((a, b) => a.url.localeCompare(b.url) ||
         a.id.localeCompare(b.id) ||
         a.message.localeCompare(b.message));
-    const summary = { pass: 0, warn: 0, fail: 0 };
-    for (const r of results)
+    const summary = { pass: 0, info: 0, warn: 0, fail: 0 };
+    for (const r of unique)
         summary[r.status]++;
     return {
         version: "1.0",
         url,
         checkedAt: new Date().toISOString(),
         summary,
-        results,
+        results: unique,
     };
 }

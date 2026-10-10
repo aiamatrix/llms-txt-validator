@@ -1,4 +1,5 @@
 import { it, expect, vi, afterEach } from "vitest";
+import { validate } from "../src/validator.js";
 import { Client, pooled } from "../src/network.js";
 afterEach(() => vi.unstubAllGlobals());
 it("HEAD falls back to GET", async () => {
@@ -83,7 +84,7 @@ it("aborts requests when timeout expires", async () => {
     ),
   );
   await expect(new Client(5).request("https://example.com/a")).rejects.toThrow(
-    "Aborted",
+    "timed out after 5 ms",
   );
 });
 it("caps response bytes", async () => {
@@ -94,4 +95,36 @@ it("caps response bytes", async () => {
   await expect(
     new Client(100).request("https://example.com/a"),
   ).rejects.toThrow("2 MiB");
+});
+
+it("preserves underlying network error codes without stacks", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockRejectedValue(
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("example.invalid"), {
+          code: "ENOTFOUND",
+        }),
+      }),
+    ),
+  );
+  await expect(
+    new Client(100).request("https://example.invalid/a"),
+  ).rejects.toThrow("fetch failed: ENOTFOUND example.invalid");
+});
+it("validation reports underlying fetch errors", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockRejectedValue(
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("example.invalid"), {
+          code: "ENOTFOUND",
+        }),
+      }),
+    ),
+  );
+  const report = await validate("https://example.invalid");
+  expect(report.results.find((r) => r.id === "file.fetch")?.message).toBe(
+    "fetch failed: ENOTFOUND example.invalid",
+  );
 });

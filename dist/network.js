@@ -1,4 +1,12 @@
 import { VERSION } from "./spec.js";
+export function networkMessage(error, timeout) {
+    const e = error;
+    if (e?.name === "AbortError" || e?.name === "TimeoutError")
+        return timeout ? `timed out after ${timeout} ms` : "timed out";
+    const message = e?.message ?? String(error);
+    const cause = [e?.cause?.code, e?.cause?.message].filter(Boolean).join(" ");
+    return cause ? `${message}: ${cause}` : message;
+}
 export class Client {
     timeout;
     cache = new Map();
@@ -66,6 +74,11 @@ export class Client {
                 };
             }
             throw Error("More than 10 redirects");
+        }
+        catch (e) {
+            throw new Error(controller.signal.aborted
+                ? `timed out after ${this.timeout} ms`
+                : networkMessage(e, this.timeout));
         }
         finally {
             clearTimeout(timer);

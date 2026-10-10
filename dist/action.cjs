@@ -6,7 +6,11 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -5602,8 +5606,10 @@ MarkdownIt.prototype.renderInline = function(src, env) {
 };
 var lib_default = MarkdownIt;
 
-// src/spec.ts
+// src/version.ts
 var VERSION = "1.0.0";
+
+// src/spec.ts
 var SPEC = {
   format: "https://llmstxt.org/#format",
   proposal: "https://llmstxt.org/#proposal",
@@ -5641,14 +5647,14 @@ function checkFormat(input, url) {
   let sectionBad = false;
   let preambleStarted = false;
   let summarySeen = false;
+  const warn = (id, message) => results.push({ id, status: "warn", message, specRef: SPEC.format, url });
   const close = () => {
-    if (section) {
+    if (section)
       add2(
         `format.section.${sectionNumber}`,
         count > 0 && !sectionBad,
-        "Each H2 section must contain only nonempty link-list items."
+        "Each H2 section must contain nonempty link-list items."
       );
-    }
   };
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
@@ -5660,54 +5666,78 @@ function checkFormat(input, url) {
         count = 0;
         sectionBad = !tokens[i + 1]?.content.trim();
         sectionNumber++;
-      } else if (i > 0) {
-        if (section) sectionBad = true;
       }
       i += 2;
       continue;
     }
     if (!section) {
       if (t.type === "blockquote_open") {
-        add2(
-          "format.summary-order",
-          !preambleStarted && !summarySeen,
-          "An optional summary must precede the non-heading preamble."
-        );
+        if (preambleStarted || summarySeen)
+          warn(
+            "format.summary-order",
+            "An optional summary should precede the non-heading preamble."
+          );
+        else
+          add2(
+            "format.summary-order",
+            true,
+            "Summary precedes the non-heading preamble."
+          );
         summarySeen = true;
       } else if (t.type.endsWith("_open") || t.type === "fence" || t.type === "html_block")
         preambleStarted = true;
       continue;
     }
-    if (t.type === "bullet_list_open") {
+    if (t.type === "bullet_list_open" || t.type === "ordered_list_open") {
       const end = tokens.findIndex(
-        (x, j) => j > i && x.type === "bullet_list_close" && x.level === 0
+        (x, j) => j > i && x.type === t.type.replace("_open", "_close") && x.level === 0
       );
-      const items = tokens.slice(i + 1, end);
-      for (const item of items.filter((x) => x.type === "list_item_open")) {
-        const a = item.map?.[0] ?? 0;
-        const b = item.map?.[1] ?? a + 1;
-        const raw = text2.split("\n").slice(a, b).join("\n").trimEnd();
-        const match2 = /^- \[([^\]\n]+)\]\(([^\s)]+)\)(?:\s*:\s*([^\n]+))?\s*$/.exec(raw);
-        if (!match2) sectionBad = true;
+      for (let j = i + 1; j < end; j++) {
+        if (tokens[j].type !== "list_item_open") continue;
+        count++;
+        const level = tokens[j].level;
+        const itemEnd = tokens.findIndex(
+          (x, k) => k > j && x.type === "list_item_close" && x.level === level
+        );
+        const inlines = tokens.slice(j + 1, itemEnd).filter((x) => x.type === "inline");
+        const children = inlines.flatMap((x) => x.children ?? []);
+        const firstLink = children.find((x) => x.type === "link_open");
+        for (const child of children.filter((x) => x.type === "link_open")) {
+          const href = child.attrGet("href");
+          if (href) links.push(href);
+        }
+        if (!firstLink) sectionBad = true;
+        else if (children[0]?.type !== "link_open")
+          warn(
+            "format.item-prefix",
+            "A file-list item should start with its link."
+          );
         else {
-          count++;
-          links.push(match2[2]);
+          const linkEnd = children.findIndex((x) => x.type === "link_close");
+          const suffix = children.slice(linkEnd + 1).map((x) => x.content).join("").trim();
+          if (suffix && !suffix.startsWith(":"))
+            warn(
+              "format.item-notes",
+              "Notes after a file-list link should start with a colon."
+            );
         }
       }
-      if (items.some(
-        (x) => x.type === "bullet_list_open" || x.type === "ordered_list_open"
-      ))
-        sectionBad = true;
       i = end;
       continue;
     }
-    if (!t.type.endsWith("_close")) sectionBad = true;
+    if (!t.type.endsWith("_close"))
+      warn(
+        "format.section-prose",
+        "H2 sections should contain file lists; additional prose is present."
+      );
   }
   close();
+  const bytes = Buffer.byteLength(input);
+  const size = bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${bytes} B`;
   results.push({
     id: "file.size",
-    status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "pass",
-    message: "Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).",
+    status: bytes > 50 * 1024 ? "warn" : "info",
+    message: bytes > 50 * 1024 ? `llms.txt is ${size}, above the 50 KiB guidance; agents may truncate or skip it (not a spec requirement).` : `llms.txt is ${size} (guidance: 50 KiB or less; not a spec requirement).`,
     specRef: SPEC.proposal,
     url
   });
@@ -5715,10 +5745,19 @@ function checkFormat(input, url) {
 }
 
 // src/network.ts
+function networkMessage(error, timeout) {
+  const e = error;
+  if (e?.name === "AbortError" || e?.name === "TimeoutError")
+    return timeout ? `timed out after ${timeout} ms` : "timed out";
+  const message = e?.message ?? String(error);
+  const cause = [e?.cause?.code, e?.cause?.message].filter(Boolean).join(" ");
+  return cause ? `${message}: ${cause}` : message;
+}
 var Client = class {
   constructor(timeout) {
     this.timeout = timeout;
   }
+  timeout;
   cache = /* @__PURE__ */ new Map();
   async request(url, method = "GET") {
     const key = method + " " + url;
@@ -5777,6 +5816,10 @@ var Client = class {
         };
       }
       throw Error("More than 10 redirects");
+    } catch (e) {
+      throw new Error(
+        controller.signal.aborted ? `timed out after ${this.timeout} ms` : networkMessage(e, this.timeout)
+      );
     } finally {
       clearTimeout(timer);
     }
@@ -13784,9 +13827,12 @@ async function validate(target, options = {}) {
     }
     url = u.href;
   }
+  let rootOrigin = remote ? new URL(url).origin : "";
+  const sameOrigin = (resourceUrl) => new URL(resourceUrl).origin === rootOrigin;
   const client = new Client(timeout);
   const indexes = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
+  const checkedDiscovery = /* @__PURE__ */ new Set();
   const pendingIndexes = /* @__PURE__ */ new Map();
   const linkQueue = [];
   const queued = /* @__PURE__ */ new Set();
@@ -13831,6 +13877,7 @@ async function validate(target, options = {}) {
           indexUrl
         );
         if (r.status !== 200) return;
+        if (indexUrl === url) rootOrigin = new URL(r.url).origin;
         indexes.add(indexUrl);
         add2(
           "file.content-type",
@@ -13849,7 +13896,7 @@ async function validate(target, options = {}) {
         results.push(...parsed.results);
         for (const l of parsed.links) enqueue(l, r.url);
       } catch (e) {
-        add2("file.fetch", "fail", String(e), indexUrl);
+        add2("file.fetch", "fail", networkMessage(e, timeout), indexUrl);
       }
     })();
     pendingIndexes.set(indexUrl, pending);
@@ -13864,13 +13911,14 @@ async function validate(target, options = {}) {
     results.push(...checkFormat(text2, url).results);
     add2(
       "network.skipped",
-      "pass",
+      "info",
       "Format-only mode: network, discovery and scope checks were not performed.",
       url
     );
   } else {
     await index(url);
     const discoverScope = async (page) => {
+      if (!sameOrigin(page)) return;
       for (const candidate of scopedCandidates(page)) {
         if (visited.has(candidate)) {
           await pendingIndexes.get(candidate);
@@ -13887,11 +13935,20 @@ async function validate(target, options = {}) {
               candidate
             );
         } catch (e) {
-          add2("scope.unavailable", "warn", String(e), candidate);
+          add2(
+            "scope.unavailable",
+            "warn",
+            networkMessage(e, timeout),
+            candidate
+          );
         }
       }
     };
     const checkDiscovery = async (r, html) => {
+      if (!sameOrigin(r.url)) return;
+      const key = `${r.url} ${html ? "html" : "md"}`;
+      if (checkedDiscovery.has(key)) return;
+      checkedDiscovery.add(key);
       await discoverScope(r.url);
       const expected = applicable(r.url, [...indexes]);
       const rels = relations(html ? r.body : "", r.headers.get("link"), r.url);
@@ -13952,7 +14009,7 @@ async function validate(target, options = {}) {
             link2
           );
           if (head.status !== 200) return;
-          if (new URL(link2).pathname.endsWith("/llms.txt")) {
+          if (sameOrigin(link2) && sameOrigin(head.url) && new URL(link2).pathname.endsWith("/llms.txt")) {
             await index(link2);
             return;
           }
@@ -13968,6 +14025,7 @@ async function validate(target, options = {}) {
             html ? "Linked resource is HTML rather than Markdown or text." : "Check linked resource content type.",
             link2
           );
+          if (!sameOrigin(link2) || !sameOrigin(r.url)) return;
           await checkDiscovery(r, html);
           if (!html && new URL(r.url).pathname.endsWith(".md")) {
             let found = false;
@@ -13991,7 +14049,7 @@ async function validate(target, options = {}) {
               );
           }
         } catch (e) {
-          add2("links.fetch", "fail", String(e), link2);
+          add2("links.fetch", "fail", networkMessage(e, timeout), link2);
         }
       });
     }
@@ -14003,17 +14061,25 @@ async function validate(target, options = {}) {
         url
       );
   }
-  results.sort(
+  const unique = [
+    ...new Map(
+      results.map((r) => [
+        JSON.stringify([r.id, r.url, r.status, r.message]),
+        r
+      ])
+    ).values()
+  ];
+  unique.sort(
     (a, b) => a.url.localeCompare(b.url) || a.id.localeCompare(b.id) || a.message.localeCompare(b.message)
   );
-  const summary = { pass: 0, warn: 0, fail: 0 };
-  for (const r of results) summary[r.status]++;
+  const summary = { pass: 0, info: 0, warn: 0, fail: 0 };
+  for (const r of unique) summary[r.status]++;
   return {
     version: "1.0",
     url,
     checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
     summary,
-    results
+    results: unique
   };
 }
 
@@ -14036,7 +14102,7 @@ function human(report) {
   return [...groups].map(([k, v]) => `${k}
 ${v.join("\n")}`).join("\n\n") + `
 
-Summary: ${report.summary.pass} pass, ${report.summary.warn} warn, ${report.summary.fail} fail
+Summary: ${report.summary.pass} pass, ${report.summary.info} info, ${report.summary.warn} warn, ${report.summary.fail} fail
 Get a full AI-readiness report: https://aiamatrix.com`;
 }
 
@@ -14047,9 +14113,21 @@ async function main() {
   const failOn = process.env["INPUT_FAIL-ON"] ?? "error";
   if (failOn !== "warn" && failOn !== "error")
     throw Error("fail-on must be warn or error");
+  const numeric = (name, fallback, minimum) => {
+    const raw = process.env[`INPUT_${name.toUpperCase()}`] ?? fallback;
+    const value = Number(raw);
+    if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < minimum)
+      throw Error(
+        `${name} must be ${minimum === 0 ? "a nonnegative" : "a positive"} integer`
+      );
+    return value;
+  };
+  const maxLinks = numeric("max-links", "50", 0);
+  const timeout = numeric("timeout", "10000", 1);
   const report = await validate(url, {
     failOn,
-    maxLinks: Number(process.env["INPUT_MAX-LINKS"] ?? 50)
+    maxLinks,
+    timeout
   });
   console.log(human(report));
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -14061,7 +14139,7 @@ async function main() {
       process.env.GITHUB_STEP_SUMMARY,
       `## llms.txt validation
 
-${report.summary.pass} pass \xB7 ${report.summary.warn} warn \xB7 ${report.summary.fail} fail
+${report.summary.pass} pass \xB7 ${report.summary.info} info \xB7 ${report.summary.warn} warn \xB7 ${report.summary.fail} fail
 
 <pre>${escape3(human(report))}</pre>
 `
@@ -14070,6 +14148,6 @@ ${report.summary.pass} pass \xB7 ${report.summary.warn} warn \xB7 ${report.summa
   process.exitCode = exitCode(report, failOn);
 }
 main().catch((e) => {
-  console.error("Tool error:", e);
+  console.error(`Tool error: ${e instanceof Error ? e.message : String(e)}`);
   process.exitCode = 2;
 });

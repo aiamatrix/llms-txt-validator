@@ -1,4 +1,5 @@
 import type { Resource } from "./types.js";
+export declare function networkMessage(error: unknown, timeout?: number): string;
 export declare class Client {
     private timeout;
     private cache;

@@ -1,5 +1,9 @@
 name: llms.txt v2 Validator
 description: Check llms.txt format, links, Markdown discovery and scoped indexes
+author: Polygons Media LLC
+branding:
+  icon: check-circle
+  color: green
 inputs:
   url:
     description: Website URL or llms.txt URL
@@ -10,6 +14,9 @@ inputs:
   max-links:
     description: Maximum linked resources to check
     default: "50"
+  timeout:
+    description: Request timeout in milliseconds
+    default: "10000"
 runs:
-  using: node20
+  using: node24
   main: dist/action.cjs

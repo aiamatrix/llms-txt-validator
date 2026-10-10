@@ -84,3 +84,17 @@ it("actual CLI returns 1 for format failures and 2 for tool errors", () => {
   expect(run.status).toBe(2);
   expect(JSON.parse(run.stdout).error.message).toBeTruthy();
 });
+
+it("informational results never affect either exit threshold", async () => {
+  const report = await validate("tests/fixtures/good/basic.txt");
+  expect(
+    report.results
+      .filter((r) => r.status === "info")
+      .map((r) => r.id)
+      .sort(),
+  ).toEqual(["file.size", "network.skipped"]);
+  expect(report.summary.info).toBe(2);
+  expect(exitCode(report, "error")).toBe(0);
+  expect(exitCode(report, "warn")).toBe(0);
+  expect(human(report)).toContain("2 info");
+});

@@ -1,4 +1,4 @@
-export type Status = "pass" | "warn" | "fail";
+export type Status = "pass" | "info" | "warn" | "fail";
 export interface Result {
     id: string;
     status: Status;

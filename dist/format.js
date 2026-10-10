@@ -25,10 +25,10 @@ export function checkFormat(input, url) {
     let sectionBad = false;
     let preambleStarted = false;
     let summarySeen = false;
+    const warn = (id, message) => results.push({ id, status: "warn", message, specRef: SPEC.format, url });
     const close = () => {
-        if (section) {
-            add(`format.section.${sectionNumber}`, count > 0 && !sectionBad, "Each H2 section must contain only nonempty link-list items.");
-        }
+        if (section)
+            add(`format.section.${sectionNumber}`, count > 0 && !sectionBad, "Each H2 section must contain nonempty link-list items.");
     };
     for (let i = 0; i < tokens.length; i++) {
         const t = tokens[i];
@@ -42,16 +42,15 @@ export function checkFormat(input, url) {
                 sectionBad = !tokens[i + 1]?.content.trim();
                 sectionNumber++;
             }
-            else if (i > 0) {
-                if (section)
-                    sectionBad = true;
-            }
             i += 2;
             continue;
         }
         if (!section) {
             if (t.type === "blockquote_open") {
-                add("format.summary-order", !preambleStarted && !summarySeen, "An optional summary must precede the non-heading preamble.");
+                if (preambleStarted || summarySeen)
+                    warn("format.summary-order", "An optional summary should precede the non-heading preamble.");
+                else
+                    add("format.summary-order", true, "Summary precedes the non-heading preamble.");
                 summarySeen = true;
             }
             else if (t.type.endsWith("_open") ||
@@ -60,34 +59,57 @@ export function checkFormat(input, url) {
                 preambleStarted = true;
             continue;
         }
-        if (t.type === "bullet_list_open") {
-            const end = tokens.findIndex((x, j) => j > i && x.type === "bullet_list_close" && x.level === 0);
-            const items = tokens.slice(i + 1, end);
-            for (const item of items.filter((x) => x.type === "list_item_open")) {
-                const a = item.map?.[0] ?? 0;
-                const b = item.map?.[1] ?? a + 1;
-                const raw = text.split("\n").slice(a, b).join("\n").trimEnd();
-                const match = /^- \[([^\]\n]+)\]\(([^\s)]+)\)(?:\s*:\s*([^\n]+))?\s*$/.exec(raw);
-                if (!match)
+        if (t.type === "bullet_list_open" || t.type === "ordered_list_open") {
+            const end = tokens.findIndex((x, j) => j > i &&
+                x.type === t.type.replace("_open", "_close") &&
+                x.level === 0);
+            for (let j = i + 1; j < end; j++) {
+                if (tokens[j].type !== "list_item_open")
+                    continue;
+                count++;
+                const level = tokens[j].level;
+                const itemEnd = tokens.findIndex((x, k) => k > j && x.type === "list_item_close" && x.level === level);
+                const inlines = tokens
+                    .slice(j + 1, itemEnd)
+                    .filter((x) => x.type === "inline");
+                const children = inlines.flatMap((x) => x.children ?? []);
+                const firstLink = children.find((x) => x.type === "link_open");
+                // Preserve links even when the item's arrangement needs a warning.
+                for (const child of children.filter((x) => x.type === "link_open")) {
+                    const href = child.attrGet("href");
+                    if (href)
+                        links.push(href);
+                }
+                if (!firstLink)
                     sectionBad = true;
+                else if (children[0]?.type !== "link_open")
+                    warn("format.item-prefix", "A file-list item should start with its link.");
                 else {
-                    count++;
-                    links.push(match[2]);
+                    const linkEnd = children.findIndex((x) => x.type === "link_close");
+                    const suffix = children
+                        .slice(linkEnd + 1)
+                        .map((x) => x.content)
+                        .join("")
+                        .trim();
+                    if (suffix && !suffix.startsWith(":"))
+                        warn("format.item-notes", "Notes after a file-list link should start with a colon.");
                 }
             }
-            if (items.some((x) => x.type === "bullet_list_open" || x.type === "ordered_list_open"))
-                sectionBad = true;
             i = end;
             continue;
         }
         if (!t.type.endsWith("_close"))
-            sectionBad = true;
+            warn("format.section-prose", "H2 sections should contain file lists; additional prose is present.");
     }
     close();
+    const bytes = Buffer.byteLength(input);
+    const size = bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${bytes} B`;
     results.push({
         id: "file.size",
-        status: Buffer.byteLength(input) > 50 * 1024 ? "warn" : "pass",
-        message: "Keep llms.txt at or below 50 KiB (tool guidance, not a spec requirement).",
+        status: bytes > 50 * 1024 ? "warn" : "info",
+        message: bytes > 50 * 1024
+            ? `llms.txt is ${size}, above the 50 KiB guidance; agents may truncate or skip it (not a spec requirement).`
+            : `llms.txt is ${size} (guidance: 50 KiB or less; not a spec requirement).`,
         specRef: SPEC.proposal,
         url,
     });
