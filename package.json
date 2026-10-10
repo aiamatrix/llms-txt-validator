@@ -1,6 +1,6 @@
 {
   "name": "@aia-matrix/llms-txt-validator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Validate llms.txt format, linked resources, Markdown discovery and scoped indexes",
   "type": "module",
   "license": "MIT",

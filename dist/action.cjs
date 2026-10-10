@@ -5607,7 +5607,7 @@ MarkdownIt.prototype.renderInline = function(src, env) {
 var lib_default = MarkdownIt;
 
 // src/version.ts
-var VERSION = "1.0.0";
+var VERSION = "1.0.1";
 
 // src/spec.ts
 var SPEC = {
