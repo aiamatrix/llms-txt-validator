@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 — unreleased
+## 1.0.1 — 2026-10-10
 
 - README: quick start for the GitHub Action and CLI; CI, npm, and license badges.
 - Development: lock file regenerated so tests run on macOS; CI now also tests on macOS.
