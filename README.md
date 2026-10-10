@@ -1,8 +1,24 @@
 # llms.txt Validator
 
+[![CI](https://github.com/aiamatrix/llms-txt-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/aiamatrix/llms-txt-validator/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/@aia-matrix/llms-txt-validator)](https://www.npmjs.com/package/@aia-matrix/llms-txt-validator) [![License: MIT](https://img.shields.io/github/license/aiamatrix/llms-txt-validator)](LICENSE)
+
 A standalone CLI, Node.js library, and GitHub Action for checking the [llms.txt v2 proposal](https://llmstxt.org/) and its [August 2026 changes](https://llmstxt.org/changes.html).
 
-<!-- Badges: enable CI, npm version, and license badges after publishing. -->
+## Quick start
+
+### GitHub Action
+
+```yaml
+- uses: aiamatrix/llms-txt-validator@v1
+  with:
+    url: https://example.com
+```
+
+### Command line
+
+```sh
+npx @aia-matrix/llms-txt-validator https://example.com
+```
 
 ## Example output
 
@@ -31,7 +47,6 @@ Requires Node.js 22 or newer.
 The npm package is published as `@aia-matrix/llms-txt-validator`; the GitHub repository and Action use `aiamatrix/llms-txt-validator`.
 
 ```sh
-npx @aia-matrix/llms-txt-validator https://example.com
 npx @aia-matrix/llms-txt-validator ./public/llms.txt
 npx @aia-matrix/llms-txt-validator ./public/llms.txt --no-network --json
 ```

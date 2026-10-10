@@ -25,3 +25,15 @@ jobs:
         run: |
           node dist/cli.js tests/fixtures/good/basic.txt --json
           node --input-type=module -e "import { validate, exitCode } from './dist/index.js'; process.exitCode = exitCode(await validate('tests/fixtures/good/basic.txt'));"
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

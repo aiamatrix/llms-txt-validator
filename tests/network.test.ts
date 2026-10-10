@@ -1,6 +1,7 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { validate } from "../src/validator.js";
 import { Client, pooled } from "../src/network.js";
+import { VERSION } from "../src/version.js";
 afterEach(() => vi.unstubAllGlobals());
 it("HEAD falls back to GET", async () => {
   const fetch = vi
@@ -13,7 +14,7 @@ it("HEAD falls back to GET", async () => {
   );
   expect(fetch.mock.calls[1][1].method).toBe("GET");
   expect(fetch.mock.calls[0][1].headers["User-Agent"]).toContain(
-    "aiamatrix-llms-txt-validator/1.0.0",
+    `aiamatrix-llms-txt-validator/${VERSION}`,
   );
 });
 it("redirect loop is bounded", async () => {
